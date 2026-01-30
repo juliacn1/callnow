@@ -335,36 +335,13 @@ const SCRIPTS = {
     title: 'Oppose ICE Funding',
     script: `Hi, I'm [NAME], a constituent from [CITY]. I'm calling to urge the Representative to oppose any DHS funding bill that increases ICE enforcement. The House controls the budget - please vote NO on expanded ICE funding. Thank you.`,
     emailSubject: 'Oppose ICE Funding in DHS Budget',
-    emailBody: `Dear Representative,
-
-As your constituent, I urge you to oppose any DHS funding bill that expands ICE enforcement operations.
-
-The House controls the federal budget. Please use that power to protect our communities by voting NO on increased ICE funding.
-
-Thank you for your time.
-
-Sincerely,
-[Your Name]
-[Your Address]`,
+    emailBody: `Dear Representative,\n\nAs your constituent, I urge you to oppose any DHS funding bill that expands ICE enforcement operations.\n\nThe House controls the federal budget. Please use that power to protect our communities by voting NO on increased ICE funding.\n\nThank you for your time.\n\nSincerely,\n[Your Name]\n[Your Address]`,
   },
   senate: {
     title: 'Protect Communities from ICE',
     script: `Hi, I'm [NAME], a constituent from [CITY]. I'm calling to urge the Senator to oppose ICE enforcement in sensitive locations and support immigrant families. Please demand accountability from ICE and protect due process. Thank you.`,
     emailSubject: 'Protect Our Community from ICE Enforcement',
-    emailBody: `Dear Senator,
-
-As your constituent, I urge you to:
-- Oppose ICE enforcement in sensitive locations (schools, hospitals, courthouses)
-- Support legislation protecting immigrant families
-- Demand accountability and transparency from ICE
-
-Our community is stronger when families can stay together.
-
-Thank you for your time.
-
-Sincerely,
-[Your Name]
-[Your Address]`,
+    emailBody: `Dear Senator,\n\nAs your constituent, I urge you to:\n\n• Oppose ICE enforcement in sensitive locations (schools, hospitals, courthouses)\n• Support legislation protecting immigrant families\n• Demand accountability and transparency from ICE\n\nOur community is stronger when families can stay together.\n\nThank you for your time.\n\nSincerely,\n[Your Name]\n[Your Address]`,
   },
 };
 
