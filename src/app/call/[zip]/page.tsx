@@ -379,8 +379,10 @@ async function getHouseReps(zip: string): Promise<Representative[]> {
   }
 
   try {
+    // Use ZIP code with country for better geocoding
+    const address = encodeURIComponent(`${zip}, USA`);
     const response = await fetch(
-      `https://www.googleapis.com/civicinfo/v2/representatives?address=${zip}&levels=country&roles=legislatorLowerBody&key=${apiKey}`,
+      `https://www.googleapis.com/civicinfo/v2/representatives?address=${address}&levels=country&roles=legislatorLowerBody&key=${apiKey}`,
       { next: { revalidate: 86400 } } // Cache for 24 hours
     );
 
