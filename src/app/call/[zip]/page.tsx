@@ -335,13 +335,13 @@ const SCRIPTS = {
     title: 'Oppose ICE Funding',
     script: `Hi, I'm [NAME], a constituent from [CITY]. I'm calling to urge the Representative to oppose any DHS funding bill that increases ICE enforcement. The House controls the budget - please vote NO on expanded ICE funding. Thank you.`,
     emailSubject: 'Oppose ICE Funding in DHS Budget',
-    emailBody: `Dear Representative,\n\nAs your constituent, I urge you to oppose any DHS funding bill that expands ICE enforcement operations.\n\nThe House controls the federal budget. Please use that power to protect our communities by voting NO on increased ICE funding.\n\nThank you for your time.\n\nSincerely,\n[Your Name]\n[Your Address]`,
+    emailBody: 'Dear Representative,%0D%0A%0D%0AAs your constituent, I urge you to oppose any DHS funding bill that expands ICE enforcement operations.%0D%0A%0D%0AThe House controls the federal budget. Please use that power to protect our communities by voting NO on increased ICE funding.%0D%0A%0D%0AThank you for your time.%0D%0A%0D%0ASincerely,%0D%0A[Your Name]%0D%0A[Your Address]',
   },
   senate: {
     title: 'Protect Communities from ICE',
     script: `Hi, I'm [NAME], a constituent from [CITY]. I'm calling to urge the Senator to oppose ICE enforcement in sensitive locations and support immigrant families. Please demand accountability from ICE and protect due process. Thank you.`,
     emailSubject: 'Protect Our Community from ICE Enforcement',
-    emailBody: `Dear Senator,\n\nAs your constituent, I urge you to:\n\n• Oppose ICE enforcement in sensitive locations (schools, hospitals, courthouses)\n• Support legislation protecting immigrant families\n• Demand accountability and transparency from ICE\n\nOur community is stronger when families can stay together.\n\nThank you for your time.\n\nSincerely,\n[Your Name]\n[Your Address]`,
+    emailBody: 'Dear Senator,%0D%0A%0D%0AAs your constituent, I urge you to:%0D%0A%0D%0A- Oppose ICE enforcement in sensitive locations (schools, hospitals, courthouses)%0D%0A- Support legislation protecting immigrant families%0D%0A- Demand accountability and transparency from ICE%0D%0A%0D%0AOur community is stronger when families can stay together.%0D%0A%0D%0AThank you for your time.%0D%0A%0D%0ASincerely,%0D%0A[Your Name]%0D%0A[Your Address]',
   },
 };
 
@@ -365,19 +365,21 @@ function getSenators(zip: string): Representative[] {
 // Fetch House Representatives from Google Civic API
 async function getHouseReps(zip: string): Promise<Representative[]> {
   const apiKey = process.env.GOOGLE_CIVIC_API_KEY;
+  console.log('getHouseReps called for ZIP:', zip, 'API key present:', !!apiKey);
 
   if (!apiKey) {
-    // No API key - return empty (senators-only mode)
+    console.log('No GOOGLE_CIVIC_API_KEY found in environment');
     return [];
   }
 
   try {
     // Use full address format for better geocoding
     const address = encodeURIComponent(zip);
-    const response = await fetch(
-      `https://www.googleapis.com/civicinfo/v2/representatives?address=${address}&key=${apiKey}`,
-      { next: { revalidate: 86400 } } // Cache for 24 hours
-    );
+    const url = `https://www.googleapis.com/civicinfo/v2/representatives?address=${address}&key=${apiKey}`;
+    console.log('Fetching Civic API:', url.replace(apiKey, 'API_KEY_HIDDEN'));
+
+    const response = await fetch(url, { next: { revalidate: 86400 } });
+    console.log('Civic API response status:', response.status);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -386,22 +388,32 @@ async function getHouseReps(zip: string): Promise<Representative[]> {
     }
 
     const data = await response.json();
-    console.log('Civic API response for', zip, ':', JSON.stringify(data).substring(0, 500));
+    console.log('Civic API offices found:', data.offices?.length || 0);
+    console.log('Civic API officials found:', data.officials?.length || 0);
+    if (data.offices) {
+      console.log('Office names:', data.offices.map((o: { name: string }) => o.name).join(', '));
+
+    }
 
     if (!data.officials || !Array.isArray(data.officials) || !data.offices) {
-      console.error('No officials in response:', data);
+      console.error('No officials in response:', JSON.stringify(data).substring(0, 500));
       return [];
     }
 
     // Find House rep offices and their official indices
     const houseReps: Representative[] = [];
     for (const office of data.offices) {
-      if (office.name?.includes('United States House') ||
+      const isHouse = office.name?.includes('United States House') ||
           office.name?.includes('U.S. Representative') ||
-          office.roles?.includes('legislatorLowerBody')) {
+          office.name?.includes('Representative in Congress') ||
+          office.roles?.includes('legislatorLowerBody');
+
+      if (isHouse) {
+        console.log('Found House office:', office.name, 'indices:', office.officialIndices);
         for (const idx of office.officialIndices || []) {
           const official = data.officials[idx];
           if (official) {
+            console.log('Adding House rep:', official.name);
             const phone = official.phones?.[0]?.replace(/\D/g, '') || '';
             const phoneDisplay = official.phones?.[0] || 'No phone listed';
             const party = official.party?.charAt(0) || '?';
@@ -417,6 +429,7 @@ async function getHouseReps(zip: string): Promise<Representative[]> {
         }
       }
     }
+    console.log('Total House reps found:', houseReps.length);
     return houseReps;
   } catch (error) {
     console.error('Error fetching house reps:', error);
@@ -552,7 +565,7 @@ export default async function CallPage({ params }: { params: Promise<{ zip: stri
                 {SCRIPTS.house.script}
               </p>
               <a
-                href={`mailto:?subject=${encodeURIComponent(SCRIPTS.house.emailSubject)}&body=${encodeURIComponent(SCRIPTS.house.emailBody)}`}
+                href={`mailto:?subject=${encodeURIComponent(SCRIPTS.house.emailSubject)}&body=${SCRIPTS.house.emailBody}`}
                 className="flex items-center justify-center gap-2 w-full p-3 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -576,7 +589,7 @@ export default async function CallPage({ params }: { params: Promise<{ zip: stri
                 {SCRIPTS.senate.script}
               </p>
               <a
-                href={`mailto:?subject=${encodeURIComponent(SCRIPTS.senate.emailSubject)}&body=${encodeURIComponent(SCRIPTS.senate.emailBody)}`}
+                href={`mailto:?subject=${encodeURIComponent(SCRIPTS.senate.emailSubject)}&body=${SCRIPTS.senate.emailBody}`}
                 className="flex items-center justify-center gap-2 w-full p-3 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
