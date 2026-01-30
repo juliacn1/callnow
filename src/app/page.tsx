@@ -29,7 +29,7 @@ export default function Home() {
               </div>
               <div>
                 <p className="font-medium">Text CALL to</p>
-                <p className="text-2xl font-mono text-blue-400">+1 (984) 279-7922</p>
+                <a href="sms:+19842797922?body=CALL" className="text-2xl font-mono text-blue-400 hover:underline">+1 (984) 279-7922</a>
               </div>
             </div>
             <div className="flex gap-4">

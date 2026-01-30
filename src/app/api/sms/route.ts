@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
   const body = formData.get('Body')?.toString().trim() || '';
   const from = formData.get('From')?.toString() || '';
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://callnow.vercel.app';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://callnow-iota.vercel.app';
 
   let responseMessage = '';
 
