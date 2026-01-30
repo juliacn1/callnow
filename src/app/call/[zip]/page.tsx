@@ -385,13 +385,16 @@ async function getHouseReps(zip: string): Promise<Representative[]> {
     );
 
     if (!response.ok) {
-      console.error('Civic API error:', response.status);
+      const errorText = await response.text();
+      console.error('Civic API error:', response.status, errorText);
       return [];
     }
 
     const data = await response.json();
+    console.log('Civic API response for', zip, ':', JSON.stringify(data).substring(0, 500));
 
     if (!data.officials || !Array.isArray(data.officials)) {
+      console.error('No officials in response:', data);
       return [];
     }
 
