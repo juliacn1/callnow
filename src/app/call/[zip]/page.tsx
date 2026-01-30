@@ -8,6 +8,15 @@ interface Representative {
   phoneDisplay: string;
   role: string;
   type: 'senator' | 'representative';
+  contactUrl?: string;
+}
+
+// Helper to generate senator contact URL from name
+function getSenatorContactUrl(name: string): string {
+  // Senators use house.gov-style contact forms via their websites
+  // Format: https://www.lastname.senate.gov/contact
+  const lastName = name.split(' ').pop()?.toLowerCase().replace(/[^a-z]/g, '') || '';
+  return `https://www.${lastName}.senate.gov/contact`;
 }
 
 // All US Senators as of 2025 with DC office numbers
@@ -359,77 +368,46 @@ function getSenators(zip: string): Representative[] {
     ...s,
     role: 'U.S. Senator',
     type: 'senator' as const,
+    contactUrl: getSenatorContactUrl(s.name),
   }));
 }
 
 // Fetch House Representatives from Google Civic API
+// Fetch House Representatives using whoismyrepresentative.com API (free, no key needed)
 async function getHouseReps(zip: string): Promise<Representative[]> {
-  const apiKey = process.env.GOOGLE_CIVIC_API_KEY;
-  console.log('getHouseReps called for ZIP:', zip, 'API key present:', !!apiKey);
-
-  if (!apiKey) {
-    console.log('No GOOGLE_CIVIC_API_KEY found in environment');
-    return [];
-  }
-
   try {
-    // Use full address format for better geocoding
-    const address = encodeURIComponent(zip);
-    const url = `https://www.googleapis.com/civicinfo/v2/representatives?address=${address}&key=${apiKey}`;
-    console.log('Fetching Civic API:', url.replace(apiKey, 'API_KEY_HIDDEN'));
-
-    const response = await fetch(url, { next: { revalidate: 86400 } });
-    console.log('Civic API response status:', response.status);
+    const response = await fetch(
+      `https://whoismyrepresentative.com/getall_mems.php?zip=${zip}&output=json`,
+      { next: { revalidate: 86400 } }
+    );
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Civic API error:', response.status, errorText);
+      console.error('WhoIsMyRep API error:', response.status);
       return [];
     }
 
     const data = await response.json();
-    console.log('Civic API offices found:', data.offices?.length || 0);
-    console.log('Civic API officials found:', data.officials?.length || 0);
-    if (data.offices) {
-      console.log('Office names:', data.offices.map((o: { name: string }) => o.name).join(', '));
 
-    }
-
-    if (!data.officials || !Array.isArray(data.officials) || !data.offices) {
-      console.error('No officials in response:', JSON.stringify(data).substring(0, 500));
+    if (!data.results || !Array.isArray(data.results)) {
+      console.log('No results from WhoIsMyRep API');
       return [];
     }
 
-    // Find House rep offices and their official indices
-    const houseReps: Representative[] = [];
-    for (const office of data.offices) {
-      const isHouse = office.name?.includes('United States House') ||
-          office.name?.includes('U.S. Representative') ||
-          office.name?.includes('Representative in Congress') ||
-          office.roles?.includes('legislatorLowerBody');
+    // Filter for House members only (not senators)
+    const houseReps: Representative[] = data.results
+      .filter((rep: { name: string; party: string; phone: string; link: string }) =>
+        !rep.link?.includes('senate.gov'))
+      .map((rep: { name: string; party: string; phone: string; link: string }) => ({
+        name: rep.name || 'Unknown',
+        party: rep.party?.charAt(0) || '?',
+        phone: rep.phone?.replace(/\D/g, '') || '',
+        phoneDisplay: rep.phone || 'No phone listed',
+        role: 'U.S. Representative',
+        type: 'representative' as const,
+        contactUrl: rep.link || `https://www.house.gov/representatives/find-your-representative`,
+      }));
 
-      if (isHouse) {
-        console.log('Found House office:', office.name, 'indices:', office.officialIndices);
-        for (const idx of office.officialIndices || []) {
-          const official = data.officials[idx];
-          if (official) {
-            console.log('Adding House rep:', official.name);
-            const phone = official.phones?.[0]?.replace(/\D/g, '') || '';
-            const phoneDisplay = official.phones?.[0] || 'No phone listed';
-            const party = official.party?.charAt(0) || '?';
-            houseReps.push({
-              name: official.name,
-              party,
-              phone,
-              phoneDisplay,
-              role: 'U.S. Representative',
-              type: 'representative' as const,
-            });
-          }
-        }
-      }
-    }
-    console.log('Total House reps found:', houseReps.length);
+    console.log('House reps found:', houseReps.length);
     return houseReps;
   } catch (error) {
     console.error('Error fetching house reps:', error);
@@ -490,27 +468,42 @@ export default async function CallPage({ params }: { params: Promise<{ zip: stri
                   <div className="mb-4">
                     <p className="text-xs text-amber-400 uppercase tracking-wide mb-2 font-semibold">House Representative (Call First)</p>
                     {houseReps.map((rep) => (
-                      <a
-                        key={rep.phone}
-                        href={`tel:${rep.phone}`}
-                        className="flex items-center gap-4 p-4 bg-gradient-to-r from-amber-900/20 to-slate-800 rounded-xl border border-amber-700 hover:border-amber-500 transition-all active:scale-98"
-                      >
-                        <div className="w-14 h-14 rounded-full bg-slate-700 overflow-hidden flex-shrink-0 flex items-center justify-center text-2xl">
-                          {rep.party === 'D' ? '🔵' : rep.party === 'R' ? '🔴' : '⚪'}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold">{rep.name}</div>
-                          <div className="text-sm text-slate-400">{rep.role} ({rep.party})</div>
-                          <div className="text-blue-400 font-mono text-sm">{rep.phoneDisplay}</div>
-                        </div>
-                        <div className="flex-shrink-0">
-                          <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center">
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                            </svg>
+                      <div key={rep.phone || rep.name} className="p-4 bg-gradient-to-r from-amber-900/20 to-slate-800 rounded-xl border border-amber-700 mb-3">
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 rounded-full bg-slate-700 overflow-hidden flex-shrink-0 flex items-center justify-center text-2xl">
+                            {rep.party === 'D' ? '🔵' : rep.party === 'R' ? '🔴' : '⚪'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold">{rep.name}</div>
+                            <div className="text-sm text-slate-400">{rep.role} ({rep.party})</div>
+                            <div className="text-blue-400 font-mono text-sm">{rep.phoneDisplay}</div>
                           </div>
                         </div>
-                      </a>
+                        <div className="flex gap-2 mt-3">
+                          <a
+                            href={`tel:${rep.phone}`}
+                            className="flex-1 flex items-center justify-center gap-2 p-3 bg-green-600 hover:bg-green-500 rounded-lg font-medium transition-colors"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                            </svg>
+                            Call
+                          </a>
+                          {rep.contactUrl && (
+                            <a
+                              href={rep.contactUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 flex items-center justify-center gap-2 p-3 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium transition-colors"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                              </svg>
+                              Email
+                            </a>
+                          )}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -519,27 +512,42 @@ export default async function CallPage({ params }: { params: Promise<{ zip: stri
                   <div>
                     <p className="text-xs text-slate-400 uppercase tracking-wide mb-2 font-semibold">U.S. Senators</p>
                     {senators.map((senator) => (
-                      <a
-                        key={senator.phone}
-                        href={`tel:${senator.phone}`}
-                        className="flex items-center gap-4 p-4 bg-slate-800 rounded-xl border border-slate-700 hover:border-blue-500 hover:bg-slate-750 transition-all active:scale-98 mb-3"
-                      >
-                        <div className="w-14 h-14 rounded-full bg-slate-700 overflow-hidden flex-shrink-0 flex items-center justify-center text-2xl">
-                          {senator.party === 'D' ? '🔵' : senator.party === 'R' ? '🔴' : '⚪'}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold">{senator.name}</div>
-                          <div className="text-sm text-slate-400">{senator.role} ({senator.party})</div>
-                          <div className="text-blue-400 font-mono text-sm">{senator.phoneDisplay}</div>
-                        </div>
-                        <div className="flex-shrink-0">
-                          <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center">
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                            </svg>
+                      <div key={senator.phone} className="p-4 bg-slate-800 rounded-xl border border-slate-700 mb-3">
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 rounded-full bg-slate-700 overflow-hidden flex-shrink-0 flex items-center justify-center text-2xl">
+                            {senator.party === 'D' ? '🔵' : senator.party === 'R' ? '🔴' : '⚪'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold">{senator.name}</div>
+                            <div className="text-sm text-slate-400">{senator.role} ({senator.party})</div>
+                            <div className="text-blue-400 font-mono text-sm">{senator.phoneDisplay}</div>
                           </div>
                         </div>
-                      </a>
+                        <div className="flex gap-2 mt-3">
+                          <a
+                            href={`tel:${senator.phone}`}
+                            className="flex-1 flex items-center justify-center gap-2 p-3 bg-green-600 hover:bg-green-500 rounded-lg font-medium transition-colors"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                            </svg>
+                            Call
+                          </a>
+                          {senator.contactUrl && (
+                            <a
+                              href={senator.contactUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 flex items-center justify-center gap-2 p-3 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium transition-colors"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                              </svg>
+                              Email
+                            </a>
+                          )}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -557,22 +565,16 @@ export default async function CallPage({ params }: { params: Promise<{ zip: stri
         {houseReps.length > 0 && (
           <section>
             <h2 className="text-lg font-semibold mb-3 text-amber-300">Script for House Rep</h2>
-            <div className="bg-slate-800 rounded-xl border border-amber-700 p-4 space-y-4">
+            <div className="bg-slate-800 rounded-xl border border-amber-700 p-4 space-y-3">
               <div className="bg-amber-900/30 border border-amber-800 rounded-lg p-3">
                 <p className="text-amber-200 font-medium">{SCRIPTS.house.title}</p>
               </div>
               <p className="text-slate-200 text-sm leading-relaxed">
                 {SCRIPTS.house.script}
               </p>
-              <a
-                href={`mailto:?subject=${encodeURIComponent(SCRIPTS.house.emailSubject)}&body=${SCRIPTS.house.emailBody}`}
-                className="flex items-center justify-center gap-2 w-full p-3 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                Send Email Instead
-              </a>
+              <p className="text-xs text-slate-500 italic">
+                Click the Email button above to send via their contact form.
+              </p>
             </div>
           </section>
         )}
@@ -581,22 +583,16 @@ export default async function CallPage({ params }: { params: Promise<{ zip: stri
         {senators.length > 0 && (
           <section>
             <h2 className="text-lg font-semibold mb-3 text-slate-300">Script for Senators</h2>
-            <div className="bg-slate-800 rounded-xl border border-slate-700 p-4 space-y-4">
+            <div className="bg-slate-800 rounded-xl border border-slate-700 p-4 space-y-3">
               <div className="bg-blue-900/30 border border-blue-800 rounded-lg p-3">
                 <p className="text-blue-200 font-medium">{SCRIPTS.senate.title}</p>
               </div>
               <p className="text-slate-200 text-sm leading-relaxed">
                 {SCRIPTS.senate.script}
               </p>
-              <a
-                href={`mailto:?subject=${encodeURIComponent(SCRIPTS.senate.emailSubject)}&body=${SCRIPTS.senate.emailBody}`}
-                className="flex items-center justify-center gap-2 w-full p-3 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                Send Email Instead
-              </a>
+              <p className="text-xs text-slate-500 italic">
+                Click the Email button above to send via their contact form.
+              </p>
             </div>
           </section>
         )}
