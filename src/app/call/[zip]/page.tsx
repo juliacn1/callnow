@@ -329,26 +329,42 @@ const ZIP_TO_STATE: Record<string, string> = {
   '995': 'AK', '996': 'AK', '997': 'AK', '998': 'AK', '999': 'AK',
 };
 
-// ICE-specific script
+// Shorter, targeted scripts for House vs Senate
 const SCRIPTS = {
-  ice: {
-    title: 'Protect Our Communities from ICE',
-    intro: "Hi, my name is [YOUR NAME] and I'm a constituent from [YOUR CITY/TOWN].",
-    body: `I'm calling to urge the Senator to take immediate action to protect our communities from ICE enforcement actions.
+  house: {
+    title: 'Oppose ICE Funding',
+    script: `Hi, I'm [NAME], a constituent from [CITY]. I'm calling to urge the Representative to oppose any DHS funding bill that increases ICE enforcement. The House controls the budget - please vote NO on expanded ICE funding. Thank you.`,
+    emailSubject: 'Oppose ICE Funding in DHS Budget',
+    emailBody: `Dear Representative,
 
-I am deeply concerned about the impact of immigration raids on families, workers, and the fabric of our neighborhoods. I urge the Senator to:
+As your constituent, I urge you to oppose any DHS funding bill that expands ICE enforcement operations.
 
-1. Publicly oppose ICE enforcement actions in sensitive locations like schools, hospitals, and courthouses
+The House controls the federal budget. Please use that power to protect our communities by voting NO on increased ICE funding.
 
-2. Support legislation that protects immigrant families and provides a pathway to citizenship
+Thank you for your time.
 
-3. Demand accountability and transparency from ICE and CBP
+Sincerely,
+[Your Name]
+[Your Address]`,
+  },
+  senate: {
+    title: 'Protect Communities from ICE',
+    script: `Hi, I'm [NAME], a constituent from [CITY]. I'm calling to urge the Senator to oppose ICE enforcement in sensitive locations and support immigrant families. Please demand accountability from ICE and protect due process. Thank you.`,
+    emailSubject: 'Protect Our Community from ICE Enforcement',
+    emailBody: `Dear Senator,
 
-4. Ensure due process rights are protected for all residents
+As your constituent, I urge you to:
+- Oppose ICE enforcement in sensitive locations (schools, hospitals, courthouses)
+- Support legislation protecting immigrant families
+- Demand accountability and transparency from ICE
 
-This is a moral issue that affects all of us. Our community is stronger when families can stay together and people can live without fear.`,
-    closing: "Thank you for your time. I'd appreciate a response about where the Senator stands on this issue.",
-    source: 'Adapted from United We Dream and ACLU recommendations',
+Our community is stronger when families can stay together.
+
+Thank you for your time.
+
+Sincerely,
+[Your Name]
+[Your Address]`,
   },
 };
 
@@ -379,10 +395,10 @@ async function getHouseReps(zip: string): Promise<Representative[]> {
   }
 
   try {
-    // Use ZIP code with country for better geocoding
-    const address = encodeURIComponent(`${zip}, USA`);
+    // Use full address format for better geocoding
+    const address = encodeURIComponent(zip);
     const response = await fetch(
-      `https://www.googleapis.com/civicinfo/v2/representatives?address=${address}&levels=country&roles=legislatorLowerBody&key=${apiKey}`,
+      `https://www.googleapis.com/civicinfo/v2/representatives?address=${address}&key=${apiKey}`,
       { next: { revalidate: 86400 } } // Cache for 24 hours
     );
 
@@ -395,25 +411,36 @@ async function getHouseReps(zip: string): Promise<Representative[]> {
     const data = await response.json();
     console.log('Civic API response for', zip, ':', JSON.stringify(data).substring(0, 500));
 
-    if (!data.officials || !Array.isArray(data.officials)) {
+    if (!data.officials || !Array.isArray(data.officials) || !data.offices) {
       console.error('No officials in response:', data);
       return [];
     }
 
-    return data.officials.map((official: any) => {
-      const phone = official.phones?.[0]?.replace(/\D/g, '') || '';
-      const phoneDisplay = official.phones?.[0] || 'No phone listed';
-      const party = official.party?.charAt(0) || '?';
-
-      return {
-        name: official.name,
-        party,
-        phone,
-        phoneDisplay,
-        role: 'U.S. Representative',
-        type: 'representative' as const,
-      };
-    });
+    // Find House rep offices and their official indices
+    const houseReps: Representative[] = [];
+    for (const office of data.offices) {
+      if (office.name?.includes('United States House') ||
+          office.name?.includes('U.S. Representative') ||
+          office.roles?.includes('legislatorLowerBody')) {
+        for (const idx of office.officialIndices || []) {
+          const official = data.officials[idx];
+          if (official) {
+            const phone = official.phones?.[0]?.replace(/\D/g, '') || '';
+            const phoneDisplay = official.phones?.[0] || 'No phone listed';
+            const party = official.party?.charAt(0) || '?';
+            houseReps.push({
+              name: official.name,
+              party,
+              phone,
+              phoneDisplay,
+              role: 'U.S. Representative',
+              type: 'representative' as const,
+            });
+          }
+        }
+      }
+    }
+    return houseReps;
   } catch (error) {
     console.error('Error fetching house reps:', error);
     return [];
@@ -437,8 +464,6 @@ export default async function CallPage({ params }: { params: Promise<{ zip: stri
   const houseReps = await getHouseReps(zip);
   const allReps = [...senators, ...houseReps];
   const state = getStateFromZip(zip);
-  const script = SCRIPTS.ice;
-  const hasHouseReps = houseReps.length > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 text-white">
@@ -538,33 +563,53 @@ export default async function CallPage({ params }: { params: Promise<{ zip: stri
           </div>
         </section>
 
-        {/* Script */}
-        <section>
-          <h2 className="text-lg font-semibold mb-3 text-slate-300">Your Script</h2>
-          <div className="bg-slate-800 rounded-xl border border-slate-700 p-4 space-y-4">
-            <div className="bg-blue-900/30 border border-blue-800 rounded-lg p-3">
-              <p className="text-blue-200 font-medium">{script.title}</p>
-            </div>
-
-            <div className="space-y-4 text-slate-200">
-              <p className="bg-yellow-900/20 border-l-4 border-yellow-600 pl-3 py-2 text-yellow-100">
-                {script.intro}
-              </p>
-
-              <div className="whitespace-pre-line text-sm leading-relaxed">
-                {script.body}
+        {/* House Script */}
+        {houseReps.length > 0 && (
+          <section>
+            <h2 className="text-lg font-semibold mb-3 text-amber-300">Script for House Rep</h2>
+            <div className="bg-slate-800 rounded-xl border border-amber-700 p-4 space-y-4">
+              <div className="bg-amber-900/30 border border-amber-800 rounded-lg p-3">
+                <p className="text-amber-200 font-medium">{SCRIPTS.house.title}</p>
               </div>
-
-              <p className="bg-green-900/20 border-l-4 border-green-600 pl-3 py-2 text-green-100">
-                {script.closing}
+              <p className="text-slate-200 text-sm leading-relaxed">
+                {SCRIPTS.house.script}
               </p>
+              <a
+                href={`mailto:?subject=${encodeURIComponent(SCRIPTS.house.emailSubject)}&body=${encodeURIComponent(SCRIPTS.house.emailBody)}`}
+                className="flex items-center justify-center gap-2 w-full p-3 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Send Email Instead
+              </a>
             </div>
+          </section>
+        )}
 
-            <p className="text-xs text-slate-500 pt-2 border-t border-slate-700">
-              {script.source}
-            </p>
-          </div>
-        </section>
+        {/* Senate Script */}
+        {senators.length > 0 && (
+          <section>
+            <h2 className="text-lg font-semibold mb-3 text-slate-300">Script for Senators</h2>
+            <div className="bg-slate-800 rounded-xl border border-slate-700 p-4 space-y-4">
+              <div className="bg-blue-900/30 border border-blue-800 rounded-lg p-3">
+                <p className="text-blue-200 font-medium">{SCRIPTS.senate.title}</p>
+              </div>
+              <p className="text-slate-200 text-sm leading-relaxed">
+                {SCRIPTS.senate.script}
+              </p>
+              <a
+                href={`mailto:?subject=${encodeURIComponent(SCRIPTS.senate.emailSubject)}&body=${encodeURIComponent(SCRIPTS.senate.emailBody)}`}
+                className="flex items-center justify-center gap-2 w-full p-3 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Send Email Instead
+              </a>
+            </div>
+          </section>
+        )}
 
         {/* Tips */}
         <section>
@@ -581,7 +626,7 @@ export default async function CallPage({ params }: { params: Promise<{ zip: stri
               </li>
               <li className="flex gap-2">
                 <span className="text-green-500">✓</span>
-                <span>You&apos;ll likely speak to a staffer, not the Senator</span>
+                <span>You&apos;ll likely speak to a staffer, not your rep</span>
               </li>
               <li className="flex gap-2">
                 <span className="text-green-500">✓</span>
