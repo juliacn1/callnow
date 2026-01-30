@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og';
 
 export const runtime = 'edge';
 
-export const alt = 'CallNow - Call Your Senator';
+export const alt = 'CallNow - Call Your Rep';
 export const size = {
   width: 1200,
   height: 630,
@@ -33,7 +33,7 @@ export default async function Image() {
             marginBottom: 20,
           }}
         >
-          Call Your Senator
+          Call Your Rep
         </div>
         <div
           style={{
@@ -43,7 +43,7 @@ export default async function Image() {
             maxWidth: 800,
           }}
         >
-          Take 2 minutes to make your voice heard
+          Take 5 minutes to make your voice heard
         </div>
         <div
           style={{

@@ -1,5 +1,15 @@
 import { Metadata } from 'next';
 
+// Types for representatives
+interface Representative {
+  name: string;
+  party: string;
+  phone: string;
+  phoneDisplay: string;
+  role: string;
+  type: 'senator' | 'representative';
+}
+
 // All US Senators as of 2025 with DC office numbers
 const SENATORS: Record<string, { name: string; party: string; phone: string; phoneDisplay: string }[]> = {
   AL: [
@@ -347,7 +357,7 @@ function getStateFromZip(zip: string): string | null {
   return ZIP_TO_STATE[prefix] || null;
 }
 
-function getSenators(zip: string) {
+function getSenators(zip: string): Representative[] {
   const state = getStateFromZip(zip);
   if (!state || !SENATORS[state]) {
     return [];
@@ -355,15 +365,62 @@ function getSenators(zip: string) {
   return SENATORS[state].map(s => ({
     ...s,
     role: 'U.S. Senator',
+    type: 'senator' as const,
   }));
+}
+
+// Fetch House Representatives from Google Civic API
+async function getHouseReps(zip: string): Promise<Representative[]> {
+  const apiKey = process.env.GOOGLE_CIVIC_API_KEY;
+
+  if (!apiKey) {
+    // No API key - return empty (senators-only mode)
+    return [];
+  }
+
+  try {
+    const response = await fetch(
+      `https://www.googleapis.com/civicinfo/v2/representatives?address=${zip}&levels=country&roles=legislatorLowerBody&key=${apiKey}`,
+      { next: { revalidate: 86400 } } // Cache for 24 hours
+    );
+
+    if (!response.ok) {
+      console.error('Civic API error:', response.status);
+      return [];
+    }
+
+    const data = await response.json();
+
+    if (!data.officials || !Array.isArray(data.officials)) {
+      return [];
+    }
+
+    return data.officials.map((official: any) => {
+      const phone = official.phones?.[0]?.replace(/\D/g, '') || '';
+      const phoneDisplay = official.phones?.[0] || 'No phone listed';
+      const party = official.party?.charAt(0) || '?';
+
+      return {
+        name: official.name,
+        party,
+        phone,
+        phoneDisplay,
+        role: 'U.S. Representative',
+        type: 'representative' as const,
+      };
+    });
+  } catch (error) {
+    console.error('Error fetching house reps:', error);
+    return [];
+  }
 }
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: 'Call Your Senator | CallNow',
-    description: 'Make your voice heard. Call your senator about ICE enforcement in your community.',
+    title: 'Call Your Rep | CallNow',
+    description: 'Make your voice heard. Call your representatives about ICE enforcement in your community.',
     openGraph: {
-      title: 'Call Your Senator | CallNow',
+      title: 'Call Your Rep | CallNow',
       description: 'Make your voice heard. Takes 2 minutes.',
     },
   };
@@ -372,8 +429,11 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function CallPage({ params }: { params: Promise<{ zip: string }> }) {
   const { zip } = await params;
   const senators = getSenators(zip);
+  const houseReps = await getHouseReps(zip);
+  const allReps = [...senators, ...houseReps];
   const state = getStateFromZip(zip);
   const script = SCRIPTS.ice;
+  const hasHouseReps = houseReps.length > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 text-white">
@@ -386,39 +446,87 @@ export default async function CallPage({ params }: { params: Promise<{ zip: stri
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-6">
-        {/* Senators */}
+        {/* Who to call - explanation */}
+        <section className="bg-gradient-to-r from-amber-900/30 to-orange-900/30 rounded-xl border border-amber-800 p-4">
+          <h3 className="font-semibold text-amber-200 mb-2">Who should you call?</h3>
+          <p className="text-sm text-slate-300 mb-2">
+            <strong className="text-amber-200">Both matter</strong>, but your <strong>House Representative</strong> has the most direct impact on ICE funding. The House controls the budget for DHS and ICE.
+          </p>
+          <p className="text-sm text-slate-300">
+            <strong className="text-amber-200">Our recommendation:</strong> Call your House Rep first, then call both Senators. Takes about 5 minutes total.
+          </p>
+        </section>
+
+        {/* Representatives */}
         <section>
           <h2 className="text-lg font-semibold mb-3 text-slate-300">
-            Your Senators {state ? `(${state})` : `(ZIP: ${zip})`}
+            Your Representatives {state ? `(${state})` : `(ZIP: ${zip})`}
           </h2>
           <div className="space-y-3">
-            {senators.length > 0 ? (
-              senators.map((senator) => (
-                <a
-                  key={senator.phone}
-                  href={`tel:${senator.phone}`}
-                  className="flex items-center gap-4 p-4 bg-slate-800 rounded-xl border border-slate-700 hover:border-blue-500 hover:bg-slate-750 transition-all active:scale-98"
-                >
-                  <div className="w-14 h-14 rounded-full bg-slate-700 overflow-hidden flex-shrink-0 flex items-center justify-center text-2xl">
-                    {senator.party === 'D' ? '🔵' : senator.party === 'R' ? '🔴' : '⚪'}
+            {allReps.length > 0 ? (
+              <>
+                {/* House Reps first (most impact) */}
+                {houseReps.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-xs text-amber-400 uppercase tracking-wide mb-2 font-semibold">House Representative (Call First)</p>
+                    {houseReps.map((rep) => (
+                      <a
+                        key={rep.phone}
+                        href={`tel:${rep.phone}`}
+                        className="flex items-center gap-4 p-4 bg-gradient-to-r from-amber-900/20 to-slate-800 rounded-xl border border-amber-700 hover:border-amber-500 transition-all active:scale-98"
+                      >
+                        <div className="w-14 h-14 rounded-full bg-slate-700 overflow-hidden flex-shrink-0 flex items-center justify-center text-2xl">
+                          {rep.party === 'D' ? '🔵' : rep.party === 'R' ? '🔴' : '⚪'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold">{rep.name}</div>
+                          <div className="text-sm text-slate-400">{rep.role} ({rep.party})</div>
+                          <div className="text-blue-400 font-mono text-sm">{rep.phoneDisplay}</div>
+                        </div>
+                        <div className="flex-shrink-0">
+                          <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                            </svg>
+                          </div>
+                        </div>
+                      </a>
+                    ))}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold">{senator.name}</div>
-                    <div className="text-sm text-slate-400">{senator.role} ({senator.party})</div>
-                    <div className="text-blue-400 font-mono text-sm">{senator.phoneDisplay}</div>
+                )}
+                {/* Senators */}
+                {senators.length > 0 && (
+                  <div>
+                    <p className="text-xs text-slate-400 uppercase tracking-wide mb-2 font-semibold">U.S. Senators</p>
+                    {senators.map((senator) => (
+                      <a
+                        key={senator.phone}
+                        href={`tel:${senator.phone}`}
+                        className="flex items-center gap-4 p-4 bg-slate-800 rounded-xl border border-slate-700 hover:border-blue-500 hover:bg-slate-750 transition-all active:scale-98 mb-3"
+                      >
+                        <div className="w-14 h-14 rounded-full bg-slate-700 overflow-hidden flex-shrink-0 flex items-center justify-center text-2xl">
+                          {senator.party === 'D' ? '🔵' : senator.party === 'R' ? '🔴' : '⚪'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold">{senator.name}</div>
+                          <div className="text-sm text-slate-400">{senator.role} ({senator.party})</div>
+                          <div className="text-blue-400 font-mono text-sm">{senator.phoneDisplay}</div>
+                        </div>
+                        <div className="flex-shrink-0">
+                          <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                            </svg>
+                          </div>
+                        </div>
+                      </a>
+                    ))}
                   </div>
-                  <div className="flex-shrink-0">
-                    <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                      </svg>
-                    </div>
-                  </div>
-                </a>
-              ))
+                )}
+              </>
             ) : (
               <div className="p-4 bg-slate-800 rounded-xl border border-slate-700 text-center">
-                <p className="text-slate-400">No senators found for ZIP code {zip}</p>
+                <p className="text-slate-400">No representatives found for ZIP code {zip}</p>
                 <p className="text-sm text-slate-500 mt-2">Please check your ZIP code and try again.</p>
               </div>
             )}

@@ -13,19 +13,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CallNow - Call Your Senator",
-  description: "Take 2 minutes to make your voice heard. Get your senators' numbers and a script to read.",
+  title: "CallNow - Call Your Rep",
+  description: "Take 5 minutes to make your voice heard. Get your representatives' numbers and a script to read.",
   openGraph: {
-    title: "Call Your Senator",
-    description: "Take 2 minutes to make your voice heard on ICE enforcement. Tap to call + script provided.",
+    title: "Call Your Rep",
+    description: "Take 5 minutes to make your voice heard on ICE enforcement. Tap to call + script provided.",
     siteName: "CallNow",
     type: "website",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Call Your Senator",
-    description: "Take 2 minutes to make your voice heard on ICE enforcement.",
+    title: "Call Your Rep",
+    description: "Take 5 minutes to make your voice heard on ICE enforcement.",
   },
 };
 

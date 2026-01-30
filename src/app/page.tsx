@@ -13,9 +13,9 @@ export default function Home() {
         {/* Hero */}
         <section className="text-center space-y-4">
           <div className="text-6xl">📞</div>
-          <h2 className="text-3xl font-bold">Call Your Senator</h2>
+          <h2 className="text-3xl font-bold">Call Your Rep</h2>
           <p className="text-slate-300 text-lg">
-            Take 2 minutes to make your voice heard on the issues that matter.
+            Take 5 minutes to make your voice heard on the issues that matter.
           </p>
         </section>
 
@@ -55,7 +55,7 @@ export default function Home() {
               Go
             </button>
           </form>
-          <p className="text-slate-500 text-sm mt-2">We&apos;ll find your senators and give you a script</p>
+          <p className="text-slate-500 text-sm mt-2">We&apos;ll find your representatives and give you a script</p>
         </section>
 
         {/* How it works */}
@@ -68,7 +68,7 @@ export default function Home() {
               </div>
               <div>
                 <p className="font-medium">Enter your ZIP code</p>
-                <p className="text-slate-400 text-sm">We&apos;ll look up your senators</p>
+                <p className="text-slate-400 text-sm">We&apos;ll look up your representatives</p>
               </div>
             </div>
             <div className="flex gap-4">
@@ -77,7 +77,7 @@ export default function Home() {
               </div>
               <div>
                 <p className="font-medium">Tap to call</p>
-                <p className="text-slate-400 text-sm">One tap dials your senator&apos;s office</p>
+                <p className="text-slate-400 text-sm">One tap dials their office</p>
               </div>
             </div>
             <div className="flex gap-4">
@@ -106,11 +106,11 @@ export default function Home() {
             </li>
             <li className="flex gap-2">
               <span className="text-green-500">•</span>
-              <span>Senators pay attention when call volumes spike on an issue</span>
+              <span>Representatives pay attention when call volumes spike on an issue</span>
             </li>
             <li className="flex gap-2">
               <span className="text-green-500">•</span>
-              <span>It takes just 2 minutes and you&apos;ll likely talk to a staffer, not a machine</span>
+              <span>It takes just 5 minutes and you&apos;ll likely talk to a staffer, not a machine</span>
             </li>
           </ul>
         </section>
