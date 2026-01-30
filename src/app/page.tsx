@@ -19,40 +19,6 @@ export default function Home() {
           </p>
         </section>
 
-        {/* How it works */}
-        <section className="bg-slate-800 rounded-xl border border-slate-700 p-6">
-          <h3 className="font-semibold text-lg mb-4">How it works</h3>
-          <div className="space-y-4">
-            <div className="flex gap-4">
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">
-                1
-              </div>
-              <div>
-                <p className="font-medium">Text CALL to</p>
-                <a href="sms:+19842797922?body=CALL" className="text-2xl font-mono text-blue-400 hover:underline">+1 (984) 279-7922</a>
-              </div>
-            </div>
-            <div className="flex gap-4">
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">
-                2
-              </div>
-              <div>
-                <p className="font-medium">Send your ZIP code</p>
-                <p className="text-slate-400 text-sm">We&apos;ll find your senators</p>
-              </div>
-            </div>
-            <div className="flex gap-4">
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">
-                3
-              </div>
-              <div>
-                <p className="font-medium">Tap to call &amp; read the script</p>
-                <p className="text-slate-400 text-sm">We give you exactly what to say</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* Current Campaign */}
         <section>
           <h3 className="font-semibold text-lg mb-3 text-slate-300">Current Campaign</h3>
@@ -69,9 +35,9 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Quick Start for Web */}
+        {/* Enter ZIP */}
         <section>
-          <h3 className="font-semibold text-lg mb-3 text-slate-300">Or enter your ZIP code</h3>
+          <h3 className="font-semibold text-lg mb-3 text-slate-300">Enter your ZIP code</h3>
           <form action="/call" method="get" className="flex gap-2">
             <input
               type="text"
@@ -89,6 +55,41 @@ export default function Home() {
               Go
             </button>
           </form>
+          <p className="text-slate-500 text-sm mt-2">We&apos;ll find your senators and give you a script</p>
+        </section>
+
+        {/* How it works */}
+        <section className="bg-slate-800 rounded-xl border border-slate-700 p-6">
+          <h3 className="font-semibold text-lg mb-4">How it works</h3>
+          <div className="space-y-4">
+            <div className="flex gap-4">
+              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">
+                1
+              </div>
+              <div>
+                <p className="font-medium">Enter your ZIP code</p>
+                <p className="text-slate-400 text-sm">We&apos;ll look up your senators</p>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">
+                2
+              </div>
+              <div>
+                <p className="font-medium">Tap to call</p>
+                <p className="text-slate-400 text-sm">One tap dials your senator&apos;s office</p>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">
+                3
+              </div>
+              <div>
+                <p className="font-medium">Read the script</p>
+                <p className="text-slate-400 text-sm">We give you exactly what to say</p>
+              </div>
+            </div>
+          </div>
         </section>
 
         {/* Why Calls Matter */}
@@ -113,17 +114,6 @@ export default function Home() {
             </li>
           </ul>
         </section>
-
-        {/* CTA */}
-        <section className="text-center py-4">
-          <a
-            href="sms:+19842797922?body=CALL"
-            className="inline-block px-8 py-4 bg-green-600 hover:bg-green-700 rounded-xl font-semibold text-lg transition-colors"
-          >
-            📱 Text CALL Now
-          </a>
-          <p className="text-slate-500 text-sm mt-3">Opens your messaging app</p>
-        </section>
       </main>
 
       {/* Footer */}
@@ -132,7 +122,7 @@ export default function Home() {
           <p>CallNow is an open-source project.</p>
           <p>One lookup per person per day. Real voices, real impact.</p>
           <p className="pt-2">
-            <a href="https://github.com" className="text-slate-400 hover:text-white">
+            <a href="https://github.com/juliacn1/callnow" className="text-slate-400 hover:text-white">
               View on GitHub
             </a>
           </p>
