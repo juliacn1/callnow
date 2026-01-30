@@ -338,19 +338,27 @@ const ZIP_TO_STATE: Record<string, string> = {
   '995': 'AK', '996': 'AK', '997': 'AK', '998': 'AK', '999': 'AK',
 };
 
-// Shorter, targeted scripts for House vs Senate
+// Chamber-specific scripts emphasizing each body's unique powers
 const SCRIPTS = {
   house: {
-    title: 'Oppose ICE Funding',
-    script: `Hi, I'm [NAME], a constituent from [CITY]. I'm calling to urge the Representative to oppose any DHS funding bill that increases ICE enforcement. The House controls the budget - please vote NO on expanded ICE funding. Thank you.`,
-    emailSubject: 'Oppose ICE Funding in DHS Budget',
-    emailBody: 'Dear Representative,%0D%0A%0D%0AAs your constituent, I urge you to oppose any DHS funding bill that expands ICE enforcement operations.%0D%0A%0D%0AThe House controls the federal budget. Please use that power to protect our communities by voting NO on increased ICE funding.%0D%0A%0D%0AThank you for your time.%0D%0A%0D%0ASincerely,%0D%0A[Your Name]%0D%0A[Your Address]',
+    title: 'Cut ICE Funding',
+    whyMatters: 'The House controls federal spending. All budget bills must start here.',
+    script: `Hi, I'm [NAME] from [CITY]. I'm calling about DHS appropriations. I urge the Representative to vote NO on any bill that funds ICE detention beds or enforcement operations. The House has the power of the purse - please use it to defund ICE raids in our community. Thank you.`,
+    talking_points: [
+      'Vote NO on DHS funding bills with ICE increases',
+      'Cut funding for detention beds and enforcement',
+      'Support amendments to restrict ICE operations',
+    ],
   },
   senate: {
-    title: 'Protect Communities from ICE',
-    script: `Hi, I'm [NAME], a constituent from [CITY]. I'm calling to urge the Senator to oppose ICE enforcement in sensitive locations and support immigrant families. Please demand accountability from ICE and protect due process. Thank you.`,
-    emailSubject: 'Protect Our Community from ICE Enforcement',
-    emailBody: 'Dear Senator,%0D%0A%0D%0AAs your constituent, I urge you to:%0D%0A%0D%0A- Oppose ICE enforcement in sensitive locations (schools, hospitals, courthouses)%0D%0A- Support legislation protecting immigrant families%0D%0A- Demand accountability and transparency from ICE%0D%0A%0D%0AOur community is stronger when families can stay together.%0D%0A%0D%0AThank you for your time.%0D%0A%0D%0ASincerely,%0D%0A[Your Name]%0D%0A[Your Address]',
+    title: 'Block ICE Nominees & Demand Oversight',
+    whyMatters: 'The Senate confirms officials and conducts oversight hearings.',
+    script: `Hi, I'm [NAME] from [CITY]. I'm calling to urge the Senator to oppose any DHS nominees who support mass deportation, and to demand oversight hearings on ICE conduct. The Senate has confirmation power - please use it to hold ICE accountable. Thank you.`,
+    talking_points: [
+      'Oppose DHS nominees who support mass deportation',
+      'Demand Senate hearings on ICE enforcement practices',
+      'Support legislation requiring judicial review for deportations',
+    ],
   },
 };
 
@@ -443,158 +451,161 @@ export default async function CallPage({ params }: { params: Promise<{ zip: stri
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 py-6 space-y-6">
-        {/* Who to call - explanation */}
-        <section className="bg-gradient-to-r from-amber-900/30 to-orange-900/30 rounded-xl border border-amber-800 p-4">
-          <h3 className="font-semibold text-amber-200 mb-2">Who should you call?</h3>
-          <p className="text-sm text-slate-300 mb-2">
-            <strong className="text-amber-200">Both matter</strong>, but your <strong>House Representative</strong> has the most direct impact on ICE funding. The House controls the budget for DHS and ICE.
-          </p>
-          <p className="text-sm text-slate-300">
-            <strong className="text-amber-200">Our recommendation:</strong> Call your House Rep first, then call both Senators. Takes about 5 minutes total.
-          </p>
-        </section>
-
-        {/* Representatives */}
-        <section>
-          <h2 className="text-lg font-semibold mb-3 text-slate-300">
-            Your Representatives {state ? `(${state})` : `(ZIP: ${zip})`}
+      <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+        {/* Header with state info */}
+        <div className="text-center mb-2">
+          <h2 className="text-xl font-semibold text-slate-200">
+            Your Representatives {state ? `in ${state}` : `(ZIP: ${zip})`}
           </h2>
-          <div className="space-y-3">
-            {allReps.length > 0 ? (
-              <>
-                {/* House Reps first (most impact) */}
-                {houseReps.length > 0 && (
-                  <div className="mb-4">
-                    <p className="text-xs text-amber-400 uppercase tracking-wide mb-2 font-semibold">House Representative (Call First)</p>
-                    {houseReps.map((rep) => (
-                      <div key={rep.phone || rep.name} className="p-4 bg-gradient-to-r from-amber-900/20 to-slate-800 rounded-xl border border-amber-700 mb-3">
-                        <div className="flex items-center gap-4">
-                          <div className="w-14 h-14 rounded-full bg-slate-700 overflow-hidden flex-shrink-0 flex items-center justify-center text-2xl">
+          <p className="text-sm text-slate-400 mt-1">Call both chambers - each has different powers to stop ICE</p>
+        </div>
+
+        {allReps.length === 0 ? (
+          <div className="p-6 bg-slate-800 rounded-xl border border-slate-700 text-center">
+            <p className="text-slate-400">No representatives found for ZIP code {zip}</p>
+            <p className="text-sm text-slate-500 mt-2">Please check your ZIP code and try again.</p>
+          </div>
+        ) : (
+          /* Two-column layout on desktop, stacked on mobile */
+          <div className="grid md:grid-cols-2 gap-6">
+
+            {/* HOUSE COLUMN */}
+            <div className="space-y-4">
+              <div className="bg-gradient-to-br from-amber-900/40 to-slate-800 rounded-xl border border-amber-700 overflow-hidden">
+                {/* House Header */}
+                <div className="bg-amber-900/50 px-4 py-3 border-b border-amber-700">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-amber-200 text-lg">HOUSE</h3>
+                    <span className="text-xs bg-amber-600 text-white px-2 py-1 rounded-full font-medium">CALL FIRST</span>
+                  </div>
+                  <p className="text-xs text-amber-300/80 mt-1">{SCRIPTS.house.whyMatters}</p>
+                </div>
+
+                {/* House Rep(s) */}
+                <div className="p-4 space-y-3">
+                  {houseReps.length > 0 ? (
+                    houseReps.map((rep) => (
+                      <div key={rep.phone || rep.name} className="bg-slate-800/50 rounded-lg p-3">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-lg">
                             {rep.party === 'D' ? '🔵' : rep.party === 'R' ? '🔴' : '⚪'}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="font-semibold">{rep.name}</div>
-                            <div className="text-sm text-slate-400">{rep.role} ({rep.party})</div>
-                            <div className="text-blue-400 font-mono text-sm">{rep.phoneDisplay}</div>
+                            <div className="font-semibold text-sm">{rep.name}</div>
+                            <div className="text-xs text-slate-400">{rep.phoneDisplay}</div>
                           </div>
                         </div>
-                        <div className="flex gap-2 mt-3">
-                          <a
-                            href={`tel:${rep.phone}`}
-                            className="flex-1 flex items-center justify-center gap-2 p-3 bg-green-600 hover:bg-green-500 rounded-lg font-medium transition-colors"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                            </svg>
+                        <div className="flex gap-2">
+                          <a href={`tel:${rep.phone}`} className="flex-1 flex items-center justify-center gap-1 p-2 bg-green-600 hover:bg-green-500 rounded-lg text-sm font-medium transition-colors">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
                             Call
                           </a>
                           {rep.contactUrl && (
-                            <a
-                              href={rep.contactUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex-1 flex items-center justify-center gap-2 p-3 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium transition-colors"
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                              </svg>
+                            <a href={rep.contactUrl} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-1 p-2 bg-amber-600 hover:bg-amber-500 rounded-lg text-sm font-medium transition-colors">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                               Email
                             </a>
                           )}
                         </div>
                       </div>
-                    ))}
+                    ))
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-slate-400 text-sm">House rep not found</p>
+                      <a href="https://www.house.gov/representatives/find-your-representative" target="_blank" rel="noopener noreferrer" className="text-amber-400 text-sm underline">Find your rep on house.gov</a>
+                    </div>
+                  )}
+                </div>
+
+                {/* House Script */}
+                <div className="border-t border-amber-700/50 p-4 bg-slate-900/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-amber-400 text-xs font-semibold uppercase tracking-wide">Your Script</span>
+                    <span className="text-amber-300 font-medium text-sm">{SCRIPTS.house.title}</span>
                   </div>
-                )}
+                  <p className="text-slate-300 text-sm leading-relaxed mb-3">
+                    {SCRIPTS.house.script}
+                  </p>
+                  <div className="space-y-1">
+                    <p className="text-xs text-slate-500 font-medium">Key asks:</p>
+                    <ul className="text-xs text-slate-400 space-y-1">
+                      {SCRIPTS.house.talking_points.map((point, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="text-amber-500 mt-0.5">•</span>
+                          <span>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* SENATE COLUMN */}
+            <div className="space-y-4">
+              <div className="bg-gradient-to-br from-blue-900/40 to-slate-800 rounded-xl border border-blue-700 overflow-hidden">
+                {/* Senate Header */}
+                <div className="bg-blue-900/50 px-4 py-3 border-b border-blue-700">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-blue-200 text-lg">SENATE</h3>
+                    <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded-full font-medium">2 SENATORS</span>
+                  </div>
+                  <p className="text-xs text-blue-300/80 mt-1">{SCRIPTS.senate.whyMatters}</p>
+                </div>
+
                 {/* Senators */}
-                {senators.length > 0 && (
-                  <div>
-                    <p className="text-xs text-slate-400 uppercase tracking-wide mb-2 font-semibold">U.S. Senators</p>
-                    {senators.map((senator) => (
-                      <div key={senator.phone} className="p-4 bg-slate-800 rounded-xl border border-slate-700 mb-3">
-                        <div className="flex items-center gap-4">
-                          <div className="w-14 h-14 rounded-full bg-slate-700 overflow-hidden flex-shrink-0 flex items-center justify-center text-2xl">
-                            {senator.party === 'D' ? '🔵' : senator.party === 'R' ? '🔴' : '⚪'}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-semibold">{senator.name}</div>
-                            <div className="text-sm text-slate-400">{senator.role} ({senator.party})</div>
-                            <div className="text-blue-400 font-mono text-sm">{senator.phoneDisplay}</div>
-                          </div>
+                <div className="p-4 space-y-3">
+                  {senators.map((senator) => (
+                    <div key={senator.phone} className="bg-slate-800/50 rounded-lg p-3">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-lg">
+                          {senator.party === 'D' ? '🔵' : senator.party === 'R' ? '🔴' : '⚪'}
                         </div>
-                        <div className="flex gap-2 mt-3">
-                          <a
-                            href={`tel:${senator.phone}`}
-                            className="flex-1 flex items-center justify-center gap-2 p-3 bg-green-600 hover:bg-green-500 rounded-lg font-medium transition-colors"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                            </svg>
-                            Call
-                          </a>
-                          {senator.contactUrl && (
-                            <a
-                              href={senator.contactUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex-1 flex items-center justify-center gap-2 p-3 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium transition-colors"
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                              </svg>
-                              Email
-                            </a>
-                          )}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm">{senator.name}</div>
+                          <div className="text-xs text-slate-400">{senator.phoneDisplay}</div>
                         </div>
                       </div>
-                    ))}
+                      <div className="flex gap-2">
+                        <a href={`tel:${senator.phone}`} className="flex-1 flex items-center justify-center gap-1 p-2 bg-green-600 hover:bg-green-500 rounded-lg text-sm font-medium transition-colors">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                          Call
+                        </a>
+                        {senator.contactUrl && (
+                          <a href={senator.contactUrl} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-1 p-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                            Email
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Senate Script */}
+                <div className="border-t border-blue-700/50 p-4 bg-slate-900/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-blue-400 text-xs font-semibold uppercase tracking-wide">Your Script</span>
+                    <span className="text-blue-300 font-medium text-sm">{SCRIPTS.senate.title}</span>
                   </div>
-                )}
-              </>
-            ) : (
-              <div className="p-4 bg-slate-800 rounded-xl border border-slate-700 text-center">
-                <p className="text-slate-400">No representatives found for ZIP code {zip}</p>
-                <p className="text-sm text-slate-500 mt-2">Please check your ZIP code and try again.</p>
+                  <p className="text-slate-300 text-sm leading-relaxed mb-3">
+                    {SCRIPTS.senate.script}
+                  </p>
+                  <div className="space-y-1">
+                    <p className="text-xs text-slate-500 font-medium">Key asks:</p>
+                    <ul className="text-xs text-slate-400 space-y-1">
+                      {SCRIPTS.senate.talking_points.map((point, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="text-blue-500 mt-0.5">•</span>
+                          <span>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
               </div>
-            )}
+            </div>
           </div>
-        </section>
-
-        {/* House Script */}
-        {houseReps.length > 0 && (
-          <section>
-            <h2 className="text-lg font-semibold mb-3 text-amber-300">Script for House Rep</h2>
-            <div className="bg-slate-800 rounded-xl border border-amber-700 p-4 space-y-3">
-              <div className="bg-amber-900/30 border border-amber-800 rounded-lg p-3">
-                <p className="text-amber-200 font-medium">{SCRIPTS.house.title}</p>
-              </div>
-              <p className="text-slate-200 text-sm leading-relaxed">
-                {SCRIPTS.house.script}
-              </p>
-              <p className="text-xs text-slate-500 italic">
-                Click the Email button above to send via their contact form.
-              </p>
-            </div>
-          </section>
-        )}
-
-        {/* Senate Script */}
-        {senators.length > 0 && (
-          <section>
-            <h2 className="text-lg font-semibold mb-3 text-slate-300">Script for Senators</h2>
-            <div className="bg-slate-800 rounded-xl border border-slate-700 p-4 space-y-3">
-              <div className="bg-blue-900/30 border border-blue-800 rounded-lg p-3">
-                <p className="text-blue-200 font-medium">{SCRIPTS.senate.title}</p>
-              </div>
-              <p className="text-slate-200 text-sm leading-relaxed">
-                {SCRIPTS.senate.script}
-              </p>
-              <p className="text-xs text-slate-500 italic">
-                Click the Email button above to send via their contact form.
-              </p>
-            </div>
-          </section>
         )}
 
         {/* Tips */}
